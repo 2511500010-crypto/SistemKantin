@@ -1,21 +1,19 @@
 <?php
 session_start();
-include 'config/koneksi.php';
+require_once("config/koneksi.php");
 
+if (!isset($_SESSION['role'])) {
+    echo "<meta http-equiv='refresh' content='0; url=welcome.php'>";
+    exit;
+}
+
+$role = $_SESSION['role'];
 $page = $_GET['page'] ?? 'dashboard';
-$allowed = [
-    'dashboard',
-    'master/menu', 'master/tambah_menu', 'master/edit_menu',
-    'master/meja', 'master/tambah_meja', 'master/edit_meja',
-    'master/user', 'master/tambah_user', 'master/edit_user',
-    'transaksi/pesanan', 'transaksi/tambah_pesanan', 'transaksi/detail_pesanan',
-    'laporan/laporan',
-];
-if (!in_array($page, $allowed)) $page = 'dashboard';
 
-$isMaster     = strpos($page, 'master/') === 0;
-$isTransaksi  = strpos($page, 'transaksi/') === 0;
-$isLaporan    = strpos($page, 'laporan/') === 0;
+$isMaster    = strpos($page, 'master/') === 0;
+$isTransaksi = strpos($page, 'transaksi/') === 0;
+$isLaporan   = strpos($page, 'laporan/') === 0;
+$isPesan     = strpos($page, 'pesan/') === 0;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -36,7 +34,7 @@ $isLaporan    = strpos($page, 'laporan/') === 0;
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="logo">
                         <a href="index.php">
-                            <h4 class="text-primary fw-bold mb-0">🍽️ Sistem Kantin</h4>
+                            <img src="image/logo.png" alt="Logo" style="max-width: 130px;">
                         </a>
                     </div>
                     <div class="sidebar-toggler x">
@@ -59,9 +57,8 @@ $isLaporan    = strpos($page, 'laporan/') === 0;
                         </a>
                     </li>
 
-                    <li class="sidebar-title">Menu</li>
+                    <?php if ($role == 'admin') : ?>
 
-                    <!-- Master Data dengan submenu accordion -->
                     <li class="sidebar-item has-sub <?= $isMaster ? 'active' : '' ?>">
                         <a href="#" class="sidebar-link">
                             <i class="bi bi-collection-fill"></i>
@@ -74,13 +71,15 @@ $isLaporan    = strpos($page, 'laporan/') === 0;
                             <li class="submenu-item <?= $page == 'master/meja' ? 'active' : '' ?>">
                                 <a href="index.php?page=master/meja" class="submenu-link">Meja</a>
                             </li>
-                            <li class="submenu-item <?= $page == 'master/user' ? 'active' : '' ?>">
-                                <a href="index.php?page=master/user" class="submenu-link">Pengguna</a>
+                            <li class="submenu-item <?= $page == 'master/kasir' ? 'active' : '' ?>">
+                                <a href="index.php?page=master/kasir" class="submenu-link">Kasir</a>
+                            </li>
+                            <li class="submenu-item <?= $page == 'master/pembeli' ? 'active' : '' ?>">
+                                <a href="index.php?page=master/pembeli" class="submenu-link">Daftar Pembeli</a>
                             </li>
                         </ul>
                     </li>
 
-                    <!-- Transaksi dengan submenu accordion -->
                     <li class="sidebar-item has-sub <?= $isTransaksi ? 'active' : '' ?>">
                         <a href="#" class="sidebar-link">
                             <i class="bi bi-receipt"></i>
@@ -93,7 +92,7 @@ $isLaporan    = strpos($page, 'laporan/') === 0;
                         </ul>
                     </li>
 
-                    <!-- Laporan dengan submenu accordion -->
+
                     <li class="sidebar-item has-sub <?= $isLaporan ? 'active' : '' ?>">
                         <a href="#" class="sidebar-link">
                             <i class="bi bi-bar-chart-fill"></i>
@@ -104,6 +103,71 @@ $isLaporan    = strpos($page, 'laporan/') === 0;
                                 <a href="index.php?page=laporan/laporan" class="submenu-link">Laporan Penjualan</a>
                             </li>
                         </ul>
+                    </li>
+
+                    <?php endif; ?>
+
+                    <?php if ($role == 'kasir') : ?>
+
+                    <li class="sidebar-item has-sub <?= $isMaster ? 'active' : '' ?>">
+                        <a href="#" class="sidebar-link">
+                            <i class="bi bi-collection-fill"></i>
+                            <span>Master Data</span>
+                        </a>
+                        <ul class="submenu <?= $isMaster ? 'submenu-open' : 'submenu-closed' ?>">
+                            <li class="submenu-item <?= $page == 'master/menu' ? 'active' : '' ?>">
+                                <a href="index.php?page=master/menu" class="submenu-link">Stok Menu</a>
+                            </li>
+                            <li class="submenu-item <?= $page == 'master/meja' ? 'active' : '' ?>">
+                                <a href="index.php?page=master/meja" class="submenu-link">Status Meja</a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="sidebar-item has-sub <?= $isTransaksi ? 'active' : '' ?>">
+                        <a href="#" class="sidebar-link">
+                            <i class="bi bi-receipt"></i>
+                            <span>Pesanan</span>
+                        </a>
+                        <ul class="submenu <?= $isTransaksi ? 'submenu-open' : 'submenu-closed' ?>">
+                            <li class="submenu-item <?= $page == 'transaksi/pesanan' ? 'active' : '' ?>">
+                                <a href="index.php?page=transaksi/pesanan" class="submenu-link">Semua Pesanan</a>
+                            </li>
+                            <li class="submenu-item <?= $page == 'transaksi/tambah_pesanan' ? 'active' : '' ?>">
+                                <a href="index.php?page=transaksi/tambah_pesanan" class="submenu-link">Input Pesanan</a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <?php endif; ?>
+
+                    <?php if ($role == 'pembeli') : ?>
+
+                    <li class="sidebar-item has-sub <?= $isPesan ? 'active' : '' ?>">
+                        <a href="#" class="sidebar-link">
+                            <i class="bi bi-cart-fill"></i>
+                            <span>Pesan</span>
+                        </a>
+                        <ul class="submenu <?= $isPesan ? 'submenu-open' : 'submenu-closed' ?>">
+                            <li class="submenu-item <?= $page == 'pesan/menu' ? 'active' : '' ?>">
+                                <a href="index.php?page=pesan/menu" class="submenu-link">Lihat Menu</a>
+                            </li>
+                            <li class="submenu-item <?= $page == 'pesan/checkout' ? 'active' : '' ?>">
+                                <a href="index.php?page=pesan/checkout" class="submenu-link">Pesan Online</a>
+                            </li>
+                            <li class="submenu-item <?= $page == 'pesan/riwayat' ? 'active' : '' ?>">
+                                <a href="index.php?page=pesan/riwayat" class="submenu-link">Riwayat Pesanan</a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <?php endif; ?>
+
+                    <li class="sidebar-item">
+                        <a href="logout.php" class="sidebar-link">
+                            <i class="bi bi-box-arrow-right"></i>
+                            <span>Logout</span>
+                        </a>
                     </li>
 
                 </ul>
@@ -122,11 +186,12 @@ $isLaporan    = strpos($page, 'laporan/') === 0;
                         <div class="nav-item dropdown me-2">
                             <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                                 <i class="bi bi-person-circle"></i>
-                                <?= $_SESSION['nama'] ?? 'Admin' ?>
+                                <?= htmlspecialchars($_SESSION['nama']) ?>
+                                <span class="badge bg-primary text-capitalize ms-1"><?= $role ?></span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="auth/logout.php">
+                                    <a class="dropdown-item" href="logout.php">
                                         <i class="bi bi-box-arrow-right"></i> Logout
                                     </a>
                                 </li>
@@ -138,7 +203,15 @@ $isLaporan    = strpos($page, 'laporan/') === 0;
         </header>
 
         <div id="main-content">
-            <?php include "page/{$page}.php"; ?>
+            <?php
+                if ($page == "dashboard") {
+                    include "page/dashboard.php";
+                } elseif (!file_exists("page/$page.php")) {
+                    echo "File Tidak Ditemukan";
+                } else {
+                    include "page/$page.php";
+                }
+            ?>
         </div>
 
         <footer>
