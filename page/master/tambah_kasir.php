@@ -7,40 +7,49 @@ if ($_SESSION['role'] != 'admin') {
 $error = '';
 
 if (isset($_POST['simpan'])) {
-    $nama     = $_POST['nama'];
-    $username = $_POST['username'];
-    $no_hp    = $_POST['no_hp'];
+    $nama     = mysqli_real_escape_string($koneksi, $_POST['nama']);
+    $username = mysqli_real_escape_string($koneksi, $_POST['username']);
+    $email    = mysqli_real_escape_string($koneksi, $_POST['email']);
     $password = $_POST['password'];
+    
+    // Hash password
+    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-    $namaFoto = '';
-
-    if (isset($_FILES['foto']) && $_FILES['foto']['error'] == 0) {
-        $ekstensi = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
-        $namaFoto = 'kasir_' . time() . '.' . $ekstensi;
-        $tujuan = 'image/kasir/' . $namaFoto;
-
-        if (!is_dir('image/kasir')) {
-            mkdir('image/kasir', 0777, true);
-        }
-
-        move_uploaded_file($_FILES['foto']['tmp_name'], $tujuan);
-    }
-
-    $cekUsername = mysqli_query($koneksi, "SELECT * FROM users WHERE username = '$username'");
-
-    if (mysqli_num_rows($cekUsername) > 0) {
+    // Cek username dengan prepared statement
+    $stmt = mysqli_prepare($koneksi, "SELECT * FROM users WHERE username = ?");
+    mysqli_stmt_bind_param($stmt, "s", $username);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if (mysqli_num_rows($result) > 0) {
         $error = "Username sudah digunakan, silakan pilih username lain.";
     } else {
-        $insert = mysqli_query($koneksi,
-            "INSERT INTO users (username, password, nama, no_hp, foto, role)
-             VALUES ('$username', '$password', '$nama', '$no_hp', '$namaFoto', 'kasir')"
-        );
-
-        if ($insert) {
-            echo "<script>window.location='index.php?page=master/kasir';</script>";
-            exit;
-        } else {
-            $error = "Gagal menyimpan: " . mysqli_error($koneksi);
+        // Cek email tidak boleh sama
+        if (!empty($email)) {
+            $stmt = mysqli_prepare($koneksi, "SELECT * FROM users WHERE email = ?");
+            mysqli_stmt_bind_param($stmt, "s", $email);
+            mysqli_stmt_execute($stmt);
+            $resultEmail = mysqli_stmt_get_result($stmt);
+            
+            if (mysqli_num_rows($resultEmail) > 0) {
+                $error = "Email sudah digunakan, silakan pilih email lain.";
+            }
+        }
+        
+        if (empty($error)) {
+            // Insert dengan kolom yang sesuai database
+            $stmt = mysqli_prepare($koneksi, 
+                "INSERT INTO users (username, email, password, nama, role) VALUES (?, ?, ?, ?, 'kasir')"
+            );
+            mysqli_stmt_bind_param($stmt, "ssss", $username, $email, $hashed_password, $nama);
+            
+            if (mysqli_stmt_execute($stmt)) {
+                echo "<script>window.location='index.php?page=master/kasir';</script>";
+                exit;
+            } else {
+                $error = "Gagal menyimpan: " . mysqli_error($koneksi);
+            }
+            mysqli_stmt_close($stmt);
         }
     }
 }
@@ -56,10 +65,10 @@ if (isset($_POST['simpan'])) {
             <div class="card-body">
 
                 <?php if ($error) : ?>
-                <div class="alert alert-danger"><?= $error ?></div>
+                <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
 
-                <form method="POST" action="" enctype="multipart/form-data">
+                <form method="POST" action="">
 
                     <div class="mb-3">
                         <label class="form-label">Nama Lengkap</label>
@@ -72,18 +81,13 @@ if (isset($_POST['simpan'])) {
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">No HP</label>
-                        <input type="text" name="no_hp" class="form-control">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Password</label>
                         <input type="password" name="password" class="form-control" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Foto <span class="text-muted">(opsional)</span></label>
-                        <input type="file" name="foto" class="form-control" accept="image/*">
                     </div>
 
                     <button type="submit" name="simpan" class="btn btn-primary">Simpan</button>

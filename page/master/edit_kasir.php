@@ -4,66 +4,69 @@ if ($_SESSION['role'] != 'admin') {
     exit;
 }
 
-$id = $_GET['id'] ?? 0;
-$cek = mysqli_query($koneksi, "SELECT * FROM users WHERE id_user = '$id' AND role = 'kasir'");
+$id = isset($_GET['id']) ? mysqli_real_escape_string($koneksi, $_GET['id']) : 0;
 
-if (mysqli_num_rows($cek) == 0) {
+$query = mysqli_query($koneksi, "SELECT * FROM users WHERE id_user = '$id' AND role = 'kasir'");
+$data = mysqli_fetch_assoc($query);
+
+if (!$data) {
     echo "<script>window.location='index.php?page=master/kasir';</script>";
     exit;
 }
 
-$kasir = mysqli_fetch_assoc($cek);
 $error = '';
 
-if (isset($_POST['simpan'])) {
-    $nama     = $_POST['nama'];
-    $username = $_POST['username'];
-    $no_hp    = $_POST['no_hp'];
+if (isset($_POST['update'])) {
+    $nama     = mysqli_real_escape_string($koneksi, $_POST['nama']);
+    $username = mysqli_real_escape_string($koneksi, $_POST['username']);
+    $email    = mysqli_real_escape_string($koneksi, $_POST['email']);
     $password = $_POST['password'];
-
-    $namaFoto = $kasir['foto'];
-
-    if (isset($_FILES['foto']) && $_FILES['foto']['error'] == 0) {
-        $ekstensi = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
-        $namaFoto = 'kasir_' . time() . '.' . $ekstensi;
-        $tujuan = 'image/kasir/' . $namaFoto;
-
-        if (!is_dir('image/kasir')) {
-            mkdir('image/kasir', 0777, true);
-        }
-
-        if (!empty($kasir['foto']) && file_exists('image/kasir/' . $kasir['foto'])) {
-            unlink('image/kasir/' . $kasir['foto']);
-        }
-
-        move_uploaded_file($_FILES['foto']['tmp_name'], $tujuan);
+    
+    // Cek username tidak bentrok dengan user lain
+    $stmt = mysqli_prepare($koneksi, "SELECT * FROM users WHERE username = ? AND id_user != ?");
+    mysqli_stmt_bind_param($stmt, "ss", $username, $id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if (mysqli_num_rows($result) > 0) {
+        $error = "Username sudah digunakan, silakan pilih username lain.";
     }
-
-    $cekUsername = mysqli_query($koneksi,
-        "SELECT * FROM users WHERE username = '$username' AND id_user != '$id'"
-    );
-
-    if (mysqli_num_rows($cekUsername) > 0) {
-        $error = "Username sudah digunakan oleh akun lain.";
-    } else {
-        if (!empty($password)) {
-            $update = mysqli_query($koneksi,
-                "UPDATE users SET nama = '$nama', username = '$username', no_hp = '$no_hp', password = '$password', foto = '$namaFoto'
-                 WHERE id_user = '$id'"
-            );
-        } else {
-            $update = mysqli_query($koneksi,
-                "UPDATE users SET nama = '$nama', username = '$username', no_hp = '$no_hp', foto = '$namaFoto'
-                 WHERE id_user = '$id'"
-            );
+    
+    // Cek email tidak bentrok dengan user lain
+    if (!empty($email)) {
+        $stmt = mysqli_prepare($koneksi, "SELECT * FROM users WHERE email = ? AND id_user != ?");
+        mysqli_stmt_bind_param($stmt, "ss", $email, $id);
+        mysqli_stmt_execute($stmt);
+        $resultEmail = mysqli_stmt_get_result($stmt);
+        
+        if (mysqli_num_rows($resultEmail) > 0) {
+            $error = "Email sudah digunakan, silakan pilih email lain.";
         }
-
-        if ($update) {
+    }
+    
+    if (empty($error)) {
+        if (!empty($password)) {
+            // Update dengan password baru
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = mysqli_prepare($koneksi, 
+                "UPDATE users SET nama = ?, username = ?, email = ?, password = ? WHERE id_user = ?"
+            );
+            mysqli_stmt_bind_param($stmt, "sssss", $nama, $username, $email, $hashed_password, $id);
+        } else {
+            // Update tanpa password
+            $stmt = mysqli_prepare($koneksi, 
+                "UPDATE users SET nama = ?, username = ?, email = ? WHERE id_user = ?"
+            );
+            mysqli_stmt_bind_param($stmt, "ssss", $nama, $username, $email, $id);
+        }
+        
+        if (mysqli_stmt_execute($stmt)) {
             echo "<script>window.location='index.php?page=master/kasir';</script>";
             exit;
         } else {
-            $error = "Gagal menyimpan: " . mysqli_error($koneksi);
+            $error = "Gagal mengupdate: " . mysqli_error($koneksi);
         }
+        mysqli_stmt_close($stmt);
     }
 }
 ?>
@@ -78,48 +81,32 @@ if (isset($_POST['simpan'])) {
             <div class="card-body">
 
                 <?php if ($error) : ?>
-                <div class="alert alert-danger"><?= $error ?></div>
+                <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
 
-                <form method="POST" action="" enctype="multipart/form-data">
+                <form method="POST" action="">
 
                     <div class="mb-3">
                         <label class="form-label">Nama Lengkap</label>
-                        <input type="text" name="nama" class="form-control"
-                               value="<?= htmlspecialchars($kasir['nama']) ?>" required>
+                        <input type="text" name="nama" class="form-control" value="<?= htmlspecialchars($data['nama']) ?>" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Username</label>
-                        <input type="text" name="username" class="form-control"
-                               value="<?= htmlspecialchars($kasir['username']) ?>" required>
+                        <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($data['username']) ?>" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">No HP</label>
-                        <input type="text" name="no_hp" class="form-control"
-                               value="<?= htmlspecialchars($kasir['no_hp'] ?? '') ?>">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($data['email'] ?? '') ?>">
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Password <span class="text-muted">(kosongkan jika tidak ingin mengubah)</span></label>
+                        <label class="form-label">Password <span class="text-muted">(kosongkan jika tidak diubah)</span></label>
                         <input type="password" name="password" class="form-control">
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Foto <span class="text-muted">(opsional, kosongkan jika tidak ingin mengubah)</span></label>
-
-                        <?php if (!empty($kasir['foto']) && file_exists('image/kasir/' . $kasir['foto'])) : ?>
-                        <div class="mb-2">
-                            <img src="image/kasir/<?= htmlspecialchars($kasir['foto']) ?>"
-                                 style="width:80px;height:80px;object-fit:cover;border-radius:50%;">
-                        </div>
-                        <?php endif; ?>
-
-                        <input type="file" name="foto" class="form-control" accept="image/*">
-                    </div>
-
-                    <button type="submit" name="simpan" class="btn btn-primary">Simpan Perubahan</button>
+                    <button type="submit" name="update" class="btn btn-primary">Update</button>
                     <a href="index.php?page=master/kasir" class="btn btn-secondary">Batal</a>
 
                 </form>
