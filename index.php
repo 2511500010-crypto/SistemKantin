@@ -150,7 +150,7 @@ $isPesan     = strpos($page, 'pesan/') === 0;
                         </a>
                         <ul class="submenu <?= $isPesan ? 'submenu-open' : 'submenu-closed' ?>">
                             <li class="submenu-item <?= $page == 'pesan/menu' ? 'active' : '' ?>">
-                                <a href="index.php?page=pesan/menu" class="submenu-link">Lihat Menu</a>
+                                <a href="index.php?page=pesan/daftar_menu" class="submenu-link">Lihat Menu</a>
                             </li>
                             <li class="submenu-item <?= $page == 'pesan/checkout' ? 'active' : '' ?>">
                                 <a href="index.php?page=pesan/checkout" class="submenu-link">Pesan Online</a>
