@@ -1,37 +1,56 @@
 <?php
 $id = $_GET['id'] ?? 0;
 
-$pesanan = mysqli_fetch_assoc(mysqli_query($koneksi, "
+// Gunakan LEFT JOIN agar data tetap muncul meskipun tidak ada meja
+$query = "
     SELECT p.*,
            COALESCE(u.nama, p.nama_pelanggan, 'Walk-in') as nama_pelanggan,
            COALESCE(u.username, '-') as username,
            COALESCE(u.email, '-') as email,
-           COALESCE(u.no_hp, '-') as no_hp,
-           m.nm_meja
+           m.nm_meja,
+           m.status as status_meja,
+           m.capacity
     FROM pesanan p
     LEFT JOIN users u ON p.id_user = u.id_user
-    INNER JOIN meja m ON p.id_meja = m.id_meja
-    WHERE p.id_pesanan = '$id'
-"));
+    LEFT JOIN meja m ON p.id_meja = m.id_meja
+    WHERE p.id_pesanan = ?
+";
 
+$stmt = mysqli_prepare($koneksi, $query);
+mysqli_stmt_bind_param($stmt, "s", $id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$pesanan = mysqli_fetch_assoc($result);
+
+// Cek apakah pesanan ada
 if (!$pesanan) {
     echo "<script>window.location='index.php?page=transaksi/pesanan';</script>";
     exit;
 }
 
-$detail = mysqli_query($koneksi, "
+// Query detail pesanan
+$detail_query = "
     SELECT dp.*, mn.nm_menu, mn.kategori
     FROM detail_pesanan dp
     INNER JOIN menu mn ON dp.id_menu = mn.id_menu
-    WHERE dp.id_pesanan = '$id'
-");
+    WHERE dp.id_pesanan = ?
+";
 
+$stmt = mysqli_prepare($koneksi, $detail_query);
+mysqli_stmt_bind_param($stmt, "s", $id);
+mysqli_stmt_execute($stmt);
+$detail = mysqli_stmt_get_result($stmt);
+
+// Status badge
 switch($pesanan['status']) {
     case 'pending': $bc = 'warning'; break;
     case 'proses':  $bc = 'info'; break;
     case 'selesai': $bc = 'success'; break;
     default:        $bc = 'danger';
 }
+
+// Ambil nama meja dengan fallback
+$nm_meja = $pesanan['nm_meja'] ?? 'Meja tidak tersedia';
 ?>
 
 <div class="page-heading">
@@ -54,7 +73,7 @@ switch($pesanan['status']) {
                         <table class="table table-borderless">
                             <tr>
                                 <td width="150"><strong>Pelanggan</strong></td>
-                                <td>: <?= htmlspecialchars($pesanan['nama_pelanggan']) ?>
+                                <td>: <?= htmlspecialchars($pesanan['nama_pelanggan'] ?? 'Walk-in') ?>
                                     <?php if ($pesanan['id_user']): ?>
                                     <span class="badge bg-primary ms-1">Member</span>
                                     <?php else: ?>
@@ -65,15 +84,11 @@ switch($pesanan['status']) {
                             <?php if ($pesanan['id_user']): ?>
                             <tr>
                                 <td><strong>Username</strong></td>
-                                <td>: @<?= htmlspecialchars($pesanan['username']) ?></td>
+                                <td>: @<?= htmlspecialchars($pesanan['username'] ?? '-') ?></td>
                             </tr>
                             <tr>
                                 <td><strong>Email</strong></td>
-                                <td>: <?= htmlspecialchars($pesanan['email']) ?></td>
-                            </tr>
-                            <tr>
-                                <td><strong>No HP</strong></td>
-                                <td>: <?= htmlspecialchars($pesanan['no_hp']) ?></td>
+                                <td>: <?= htmlspecialchars($pesanan['email'] ?? '-') ?></td>
                             </tr>
                             <?php endif; ?>
                         </table>
@@ -82,7 +97,16 @@ switch($pesanan['status']) {
                         <table class="table table-borderless">
                             <tr>
                                 <td width="150"><strong>Meja</strong></td>
-                                <td>: <?= htmlspecialchars($pesanan['nm_meja']) ?></td>
+                                <td>: <?= htmlspecialchars($nm_meja) ?>
+                                    <?php if (isset($pesanan['status_meja'])): ?>
+                                    <span class="badge bg-<?= $pesanan['status_meja'] == 'tersedia' ? 'success' : 'warning' ?> ms-1">
+                                        <?= $pesanan['status_meja'] ?>
+                                    </span>
+                                    <?php endif; ?>
+                                    <?php if (isset($pesanan['capacity'])): ?>
+                                    <span class="badge bg-info ms-1">Kapasitas: <?= $pesanan['capacity'] ?> org</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                             <tr>
                                 <td><strong>Tanggal</strong></td>
@@ -96,7 +120,7 @@ switch($pesanan['status']) {
                     </div>
                 </div>
 
-                <?php if ($pesanan['catatan']): ?>
+                <?php if (!empty($pesanan['catatan'])): ?>
                 <div class="alert alert-info">
                     <strong>Catatan:</strong> <?= htmlspecialchars($pesanan['catatan']) ?>
                 </div>
@@ -116,14 +140,19 @@ switch($pesanan['status']) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php $no = 1; $total = 0; while ($row = mysqli_fetch_assoc($detail)): $total += $row['subtotal']; ?>
+                            <?php 
+                            $no = 1; 
+                            $total = 0; 
+                            while ($row = mysqli_fetch_assoc($detail)): 
+                                $total += $row['subtotal']; 
+                            ?>
                             <tr>
                                 <td><?= $no++ ?></td>
-                                <td><strong><?= htmlspecialchars($row['nm_menu']) ?></strong></td>
-                                <td><span class="badge bg-secondary text-capitalize"><?= $row['kategori'] ?></span></td>
-                                <td><?= $row['jumlah'] ?></td>
-                                <td>Rp <?= number_format($row['subtotal'] / $row['jumlah'], 0, ',', '.') ?></td>
-                                <td>Rp <?= number_format($row['subtotal'], 0, ',', '.') ?></td>
+                                <td><strong><?= htmlspecialchars($row['nm_menu'] ?? '') ?></strong></td>
+                                <td><span class="badge bg-secondary text-capitalize"><?= $row['kategori'] ?? '-' ?></span></td>
+                                <td><?= $row['jumlah'] ?? 0 ?></td>
+                                <td>Rp <?= number_format(($row['subtotal'] ?? 0) / ($row['jumlah'] ?? 1), 0, ',', '.') ?></td>
+                                <td>Rp <?= number_format($row['subtotal'] ?? 0, 0, ',', '.') ?></td>
                             </tr>
                             <?php endwhile; ?>
                         </tbody>
@@ -139,4 +168,4 @@ switch($pesanan['status']) {
             </div>
         </div>
     </section>
-</div>s
+</div>
