@@ -181,7 +181,7 @@ $menus = mysqli_query($koneksi, "SELECT * FROM menu WHERE is_available = 1 AND s
                         <button type="submit" name="simpan" class="btn btn-primary w-100">
                             <i class="bi bi-bag-check"></i> Pesan Sekarang
                         </button>
-                        <a href="index.php?page=pesan/menu" class="btn btn-secondary w-100 mt-2">
+                        <a href="index.php?page=pesan/daftar_menu" class="btn btn-secondary w-100 mt-2">
                             <i class="bi bi-arrow-left"></i> Kembali ke Menu
                         </a>
                     </div>
