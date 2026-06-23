@@ -1,22 +1,18 @@
 <?php
-// page/transaksi/detail_pesanan.php
-
 $id = $_GET['id'] ?? 0;
 
-$query = "
-    SELECT 
-        p.*,
-        u.nama as nama_pelanggan,
-        u.username,
-        u.email,
-        u.no_hp,
-        m.nm_meja
+$pesanan = mysqli_fetch_assoc(mysqli_query($koneksi, "
+    SELECT p.*,
+           COALESCE(u.nama, p.nama_pelanggan, 'Walk-in') as nama_pelanggan,
+           COALESCE(u.username, '-') as username,
+           COALESCE(u.email, '-') as email,
+           COALESCE(u.no_hp, '-') as no_hp,
+           m.nm_meja
     FROM pesanan p
-    INNER JOIN users u ON p.id_user = u.id_user
+    LEFT JOIN users u ON p.id_user = u.id_user
     INNER JOIN meja m ON p.id_meja = m.id_meja
     WHERE p.id_pesanan = '$id'
-";
-$pesanan = mysqli_fetch_assoc(mysqli_query($koneksi, $query));
+"));
 
 if (!$pesanan) {
     echo "<script>window.location='index.php?page=transaksi/pesanan';</script>";
@@ -29,6 +25,13 @@ $detail = mysqli_query($koneksi, "
     INNER JOIN menu mn ON dp.id_menu = mn.id_menu
     WHERE dp.id_pesanan = '$id'
 ");
+
+switch($pesanan['status']) {
+    case 'pending': $bc = 'warning'; break;
+    case 'proses':  $bc = 'info'; break;
+    case 'selesai': $bc = 'success'; break;
+    default:        $bc = 'danger';
+}
 ?>
 
 <div class="page-heading">
@@ -51,20 +54,28 @@ $detail = mysqli_query($koneksi, "
                         <table class="table table-borderless">
                             <tr>
                                 <td width="150"><strong>Pelanggan</strong></td>
-                                <td>: <?= htmlspecialchars($pesanan['nama_pelanggan']) ?></td>
+                                <td>: <?= htmlspecialchars($pesanan['nama_pelanggan']) ?>
+                                    <?php if ($pesanan['id_user']): ?>
+                                    <span class="badge bg-primary ms-1">Member</span>
+                                    <?php else: ?>
+                                    <span class="badge bg-secondary ms-1">Walk-in</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
+                            <?php if ($pesanan['id_user']): ?>
                             <tr>
                                 <td><strong>Username</strong></td>
                                 <td>: @<?= htmlspecialchars($pesanan['username']) ?></td>
                             </tr>
                             <tr>
                                 <td><strong>Email</strong></td>
-                                <td>: <?= htmlspecialchars($pesanan['email'] ?? '-') ?></td>
+                                <td>: <?= htmlspecialchars($pesanan['email']) ?></td>
                             </tr>
                             <tr>
                                 <td><strong>No HP</strong></td>
-                                <td>: <?= htmlspecialchars($pesanan['no_hp'] ?? '-') ?></td>
+                                <td>: <?= htmlspecialchars($pesanan['no_hp']) ?></td>
                             </tr>
+                            <?php endif; ?>
                         </table>
                     </div>
                     <div class="col-md-6">
@@ -79,24 +90,13 @@ $detail = mysqli_query($koneksi, "
                             </tr>
                             <tr>
                                 <td><strong>Status</strong></td>
-                                <td>: 
-                                    <?php
-                                    $badge_class = '';
-                                    switch($pesanan['status']) {
-                                        case 'pending': $badge_class = 'warning'; break;
-                                        case 'proses': $badge_class = 'info'; break;
-                                        case 'selesai': $badge_class = 'success'; break;
-                                        case 'batal': $badge_class = 'danger'; break;
-                                    }
-                                    ?>
-                                    <span class="badge bg-<?= $badge_class ?> text-capitalize"><?= $pesanan['status'] ?></span>
-                                </td>
+                                <td>: <span class="badge bg-<?= $bc ?> text-capitalize"><?= $pesanan['status'] ?></span></td>
                             </tr>
                         </table>
                     </div>
                 </div>
 
-                <?php if ($pesanan['catatan']) : ?>
+                <?php if ($pesanan['catatan']): ?>
                 <div class="alert alert-info">
                     <strong>Catatan:</strong> <?= htmlspecialchars($pesanan['catatan']) ?>
                 </div>
@@ -116,12 +116,7 @@ $detail = mysqli_query($koneksi, "
                             </tr>
                         </thead>
                         <tbody>
-                            <?php 
-                            $no = 1;
-                            $total = 0;
-                            while ($row = mysqli_fetch_assoc($detail)) : 
-                                $total += $row['subtotal'];
-                            ?>
+                            <?php $no = 1; $total = 0; while ($row = mysqli_fetch_assoc($detail)): $total += $row['subtotal']; ?>
                             <tr>
                                 <td><?= $no++ ?></td>
                                 <td><strong><?= htmlspecialchars($row['nm_menu']) ?></strong></td>
@@ -144,4 +139,4 @@ $detail = mysqli_query($koneksi, "
             </div>
         </div>
     </section>
-</div>
+</div>s

@@ -87,7 +87,7 @@ $isPesan     = strpos($page, 'pesan/') === 0;
                         </a>
                         <ul class="submenu <?= $isTransaksi ? 'submenu-open' : 'submenu-closed' ?>">
                             <li class="submenu-item <?= $page == 'transaksi/pesanan' ? 'active' : '' ?>">
-                                <a href="index.php?page=transaksi/pesanan" class="submenu-link">Pesanan</a>
+                                <a href="index.php?page=transaksi/pesanan" class="submenu-link">Pesanan Transaksi</a>
                             </li>
                         </ul>
                     </li>
@@ -127,7 +127,7 @@ $isPesan     = strpos($page, 'pesan/') === 0;
                     <li class="sidebar-item has-sub <?= $isTransaksi ? 'active' : '' ?>">
                         <a href="#" class="sidebar-link">
                             <i class="bi bi-receipt"></i>
-                            <span>Pesanan</span>
+                            <span>Pesanan Transaksi</span>
                         </a>
                         <ul class="submenu <?= $isTransaksi ? 'submenu-open' : 'submenu-closed' ?>">
                             <li class="submenu-item <?= $page == 'transaksi/pesanan' ? 'active' : '' ?>">
@@ -150,7 +150,7 @@ $isPesan     = strpos($page, 'pesan/') === 0;
                         </a>
                         <ul class="submenu <?= $isPesan ? 'submenu-open' : 'submenu-closed' ?>">
                             <li class="submenu-item <?= $page == 'pesan/menu' ? 'active' : '' ?>">
-                                <a href="index.php?page=pesan/menu" class="submenu-link">Lihat Menu</a>
+                                <a href="index.php?page=pesan/daftar_menu" class="submenu-link">Lihat Menu</a>
                             </li>
                             <li class="submenu-item <?= $page == 'pesan/checkout' ? 'active' : '' ?>">
                                 <a href="index.php?page=pesan/checkout" class="submenu-link">Pesan Online</a>
