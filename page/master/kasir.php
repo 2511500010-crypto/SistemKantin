@@ -6,7 +6,6 @@ if ($_SESSION['role'] != 'admin') {
 
 if (isset($_GET['hapus'])) {
     $id = mysqli_real_escape_string($koneksi, $_GET['hapus']);
-    
     $stmt = mysqli_prepare($koneksi, "DELETE FROM users WHERE id_user = ? AND role = 'kasir'");
     mysqli_stmt_bind_param($stmt, "s", $id);
     mysqli_stmt_execute($stmt);
@@ -28,9 +27,9 @@ if (isset($_POST['toggle_aktif'])) {
     echo "<script>window.location='index.php?page=master/kasir';</script>";
     exit;
 }
-
+// kode bawah ku ni query untuk mengambil seluuruh data kasir
 $data = mysqli_query($koneksi, "SELECT * FROM users WHERE role = 'kasir' ORDER BY nama");
-?>
+?> 
 
 <div class="page-heading">
     <h3>Kasir</h3>
