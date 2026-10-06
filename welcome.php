@@ -46,3 +46,5 @@ if (isset($_SESSION['id_user'])) {
 <script src="assets/compiled/js/app.js"></script>
 </body>
 </html>
+
+// halooooooo

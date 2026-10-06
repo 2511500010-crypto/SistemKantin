@@ -65,7 +65,7 @@ $data = mysqli_query($koneksi, "SELECT * FROM users WHERE role = 'kasir' ORDER B
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <i class="bi bi-person-circle me-2"></i>
-                                        <?= htmlspecialchars($row['nama']) ?>
+                                        <?= ($row['nama']) ?>
                                     </div>
                                 </td>
                                 <td><?= htmlspecialchars($row['username']) ?></td>
