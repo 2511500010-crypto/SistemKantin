@@ -47,4 +47,3 @@ if (isset($_SESSION['id_user'])) {
 </body>
 </html>
 
-// halooooooo
